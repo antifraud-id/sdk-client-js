@@ -21,6 +21,11 @@ jobs:
           node-version: 20
           cache: npm
 
+      - name: Update version to match tag
+        run: |
+          TAG_VERSION="${GITHUB_REF_NAME#v}"
+          npm version "$TAG_VERSION" --no-git-tag-version
+
       - name: Install dependencies
         run: npm ci
 
@@ -52,15 +57,10 @@ jobs:
           node-version: 20
           registry-url: https://registry.npmjs.org
 
-      - name: Validate tag version matches package.json
+      - name: Update version to match tag
         run: |
           TAG_VERSION="${GITHUB_REF_NAME#v}"
-          PKG_VERSION=$(node -p "require('./package.json').version")
-          if [ "$TAG_VERSION" != "$PKG_VERSION" ]; then
-            echo "::error::Tag version ($TAG_VERSION) does not match package.json version ($PKG_VERSION)"
-            exit 1
-          fi
-          echo "Version: $PKG_VERSION"
+          npm version "$TAG_VERSION" --no-git-tag-version
 
       - name: Download dist artifact
         uses: actions/download-artifact@v4
@@ -72,6 +72,15 @@ jobs:
         run: npm publish --access public
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+
+      - name: Update version on main branch
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+
+          git add package.json package-lock.json
+          git commit -m "chore(release): bump version to $TAG_VERSION [skip ci]"
+          git push origin main
 
   upload-r2:
     needs: build-and-test
