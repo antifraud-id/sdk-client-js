@@ -39,7 +39,7 @@ export function pemToArrayBuffer(pem: string): ArrayBuffer {
   for (let i = 0; i < binary.length; i++) {
     bytes[i] = binary.charCodeAt(i);
   }
-  return bytes.buffer;
+  return bytes.buffer.slice(0);
 }
 
 /**
