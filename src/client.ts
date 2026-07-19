@@ -100,7 +100,17 @@ export class AntifraudClient {
         throw new ServerError(response.status, body);
       }
 
-      const data = JSON.parse(body);
+      let data: any;
+      try {
+        data = JSON.parse(body);
+      } catch (parseErr) {
+        throw new AntifraudClientError('Failed to parse response body as JSON', response.status, body);
+      }
+
+      if (!data || typeof data.session_id !== 'string') {
+        throw new AntifraudClientError('Invalid response format: session_id is missing or invalid', response.status, body);
+      }
+
       return { sessionId: data.session_id };
     } catch (err: any) {
       if (err.name === 'AbortError') {

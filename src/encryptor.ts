@@ -49,52 +49,66 @@ export async function encryptPayload(
     );
   }
 
-  // 1. Import RSA public key
-  const rsaKey = await importRsaKey(publicKeyPEM);
+  let aesKey: Uint8Array<ArrayBuffer> | null = null;
+  let plaintextBytes: Uint8Array<ArrayBuffer> | null = null;
 
-  // 2. Generate random 32-byte AES key
-  const aesKey = new Uint8Array(32);
-  crypto.getRandomValues(aesKey);
+  try {
+    // 1. Import RSA public key
+    const rsaKey = await importRsaKey(publicKeyPEM);
 
-  // 3. Encrypt AES key with RSA-OAEP-SHA256
-  const rsaCiphertext = new Uint8Array(
-    await crypto.subtle.encrypt({ name: 'RSA-OAEP' }, rsaKey, aesKey)
-  );
+    // 2. Generate random 32-byte AES key
+    aesKey = new Uint8Array(32);
+    crypto.getRandomValues(aesKey);
 
-  // 4. Import AES key for GCM
-  const aesCryptoKey = await crypto.subtle.importKey(
-    'raw',
-    aesKey,
-    { name: 'AES-GCM' },
-    false,
-    ['encrypt']
-  );
+    // 3. Encrypt AES key with RSA-OAEP-SHA256
+    const rsaCiphertext = new Uint8Array(
+      await crypto.subtle.encrypt({ name: 'RSA-OAEP' }, rsaKey, aesKey!)
+    );
 
-  // 5. Encrypt plaintext with AES-256-GCM
-  const nonce = new Uint8Array(12); // 96-bit nonce
-  crypto.getRandomValues(nonce);
-  const plaintextBytes = new TextEncoder().encode(plaintextJSON);
-  const aesCiphertext = new Uint8Array(
-    await crypto.subtle.encrypt(
-      { name: 'AES-GCM', iv: nonce },
-      aesCryptoKey,
-      plaintextBytes
-    )
-  );
+    // 4. Import AES key for GCM
+    const aesCryptoKey = await crypto.subtle.importKey(
+      'raw',
+      aesKey!,
+      { name: 'AES-GCM' },
+      false,
+      ['encrypt']
+    );
 
-  // 6. Build wire format: [4-byte BE rsaKeyLen][rsaCT][nonce ‖ aesCT]
-  const rsaKeyLen = rsaCiphertext.length;
-  const header = new ArrayBuffer(4);
-  new DataView(header).setUint32(0, rsaKeyLen, false); // big-endian
+    // 5. Encrypt plaintext with AES-256-GCM
+    const nonce = new Uint8Array(12); // 96-bit nonce
+    crypto.getRandomValues(nonce);
+    
+    plaintextBytes = new TextEncoder().encode(plaintextJSON);
+    const aesCiphertext = new Uint8Array(
+      await crypto.subtle.encrypt(
+        { name: 'AES-GCM', iv: nonce },
+        aesCryptoKey,
+        plaintextBytes!
+      )
+    );
 
-  const result = new Uint8Array(4 + rsaKeyLen + nonce.length + aesCiphertext.length);
-  result.set(new Uint8Array(header), 0);
-  result.set(rsaCiphertext, 4);
-  result.set(nonce, 4 + rsaKeyLen);
-  result.set(aesCiphertext, 4 + rsaKeyLen + nonce.length);
+    // 6. Build wire format: [4-byte BE rsaKeyLen][rsaCT][nonce ‖ aesCT]
+    const rsaKeyLen = rsaCiphertext.length;
+    const header = new ArrayBuffer(4);
+    new DataView(header).setUint32(0, rsaKeyLen, false); // big-endian
 
-  // 7. Base64 encode
-  return uint8ArrayToBase64(result);
+    const result = new Uint8Array(4 + rsaKeyLen + nonce.length + aesCiphertext.length);
+    result.set(new Uint8Array(header), 0);
+    result.set(rsaCiphertext, 4);
+    result.set(nonce, 4 + rsaKeyLen);
+    result.set(aesCiphertext, 4 + rsaKeyLen + nonce.length);
+
+    // 7. Base64 encode
+    return uint8ArrayToBase64(result);
+  } catch (err: any) {
+    if (err instanceof EncryptionError) {
+      throw err;
+    }
+    throw new EncryptionError(`Encryption failed: ${err.message || err}`);
+  } finally {
+    if (aesKey) aesKey.fill(0);
+    if (plaintextBytes) plaintextBytes.fill(0);
+  }
 }
 
 /**
