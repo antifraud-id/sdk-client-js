@@ -1,0 +1,187 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>ANTIFRAUD SDK - Basic Example</title>
+  <style>
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      font-family: system-ui, -apple-system, sans-serif;
+      padding: 2rem;
+      max-width: 800px;
+      margin: 0 auto;
+    }
+
+    h1 {
+      margin-bottom: 1.5rem;
+    }
+
+    .card {
+      background: #f5f5f5;
+      border-radius: 8px;
+      padding: 1.5rem;
+      margin-bottom: 1rem;
+    }
+
+    .card h2 {
+      font-size: 1rem;
+      margin-bottom: 0.75rem;
+      color: #333;
+    }
+
+    pre {
+      background: #1e1e1e;
+      color: #d4d4d4;
+      padding: 1rem;
+      border-radius: 4px;
+      overflow-x: auto;
+      font-size: 0.875rem;
+      white-space: pre-wrap;
+    }
+
+    button {
+      background: #0070f3;
+      color: white;
+      border: none;
+      padding: 0.75rem 1.5rem;
+      border-radius: 4px;
+      cursor: pointer;
+      font-size: 1rem;
+    }
+
+    button:hover {
+      background: #0051a8;
+    }
+
+    button:disabled {
+      background: #ccc;
+      cursor: not-allowed;
+    }
+
+    .status {
+      margin-top: 1rem;
+      padding: 0.75rem;
+      border-radius: 4px;
+    }
+
+    .status.success {
+      background: #d4edda;
+      color: #155724;
+    }
+
+    .status.error {
+      background: #f8d7da;
+      color: #721c24;
+    }
+
+    .status.loading {
+      background: #fff3cd;
+      color: #856404;
+    }
+
+    #fingerprint-output,
+    #session-output {
+      margin-top: 0.5rem;
+    }
+  </style>
+</head>
+
+<body>
+  <h1>Antifraud SDK Basic Example</h1>
+
+  <div class="card">
+    <h2>1. Initialize SDK</h2>
+    <p>SDK initializes automatically on page load.</p>
+    <div id="init-status" class="status loading">Initializing...</div>
+  </div>
+
+  <div class="card">
+    <h2>2. Collect Fingerprint</h2>
+    <button id="collect-btn" disabled>Collect Fingerprint</button>
+    <pre id="fingerprint-output">Click the button to collect...</pre>
+  </div>
+
+  <div class="card">
+    <h2>3. Create Session</h2>
+    <button id="session-btn" disabled>Create Session</button>
+    <pre id="session-output">Click the button to create a session...</pre>
+  </div>
+
+  <script src="https://sdk.antifraud.id/antifraud.min.js"></script>
+  <script>
+    const initStatus = document.getElementById('init-status');
+    const collectBtn = document.getElementById('collect-btn');
+    const sessionBtn = document.getElementById('session-btn');
+    const fingerprintOutput = document.getElementById('fingerprint-output');
+    const sessionOutput = document.getElementById('session-output');
+
+    let antifraud = null;
+
+    try {
+      antifraud = Antifraud.init({
+        projectId: 'demo-project-id',
+        publicKey: `-----BEGIN PUBLIC KEY-----
+MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAvc0y/20py7dAmh5BrGaB
+i00XvAHhDv9mqJtFhUACcJViUCfHVw7uNjRRSLxrb8gTYjGPl8U7Jy3Y5kmjf0nr
+ynMPwhgP4r1w5alJBEwYBdcI0KlqMkS1bKhjpS8714lqf+Tgfy1NXryNoe/lrIAN
+nlTB1tknJZ6dDJUFcYa7LenIf3oLzmCndjuLxLTqE2GkOVga6GWmL2B+d69+7L1m
+G1lhav8LYyKT/Dll2yzm6nmZCdG+NI4TUvg41CiFN5USRLxPvW1v8wps7EsY0ncZ
+AdqIcrmCaozSpBsiKFa0ABXE6qYoTywkBVHdWw8ksOWi94HlVxnrvzz1j7O9Ukea
+awIDAQAB
+-----END PUBLIC KEY-----`,
+        autoCollect: false,
+      });
+
+      initStatus.textContent = 'SDK initialized successfully!';
+      initStatus.className = 'status success';
+      collectBtn.disabled = false;
+      sessionBtn.disabled = false;
+    } catch (err) {
+      initStatus.textContent = 'Initialization failed: ' + err.message;
+      initStatus.className = 'status error';
+    }
+
+    collectBtn.addEventListener('click', function () {
+      try {
+        var fingerprint = antifraud.collect();
+        fingerprintOutput.textContent = JSON.stringify(fingerprint, null, 2);
+      } catch (err) {
+        fingerprintOutput.textContent = 'Error: ' + err.message;
+      }
+    });
+
+    sessionBtn.addEventListener('click', function () {
+      sessionBtn.disabled = true;
+      sessionOutput.textContent = 'Creating session...';
+
+      antifraud.createSession()
+        .then(function (result) {
+          sessionOutput.textContent = JSON.stringify(result, null, 2);
+        })
+        .catch(function (err) {
+          if (err.name === 'ServerError' || err.message.includes('fetch')) {
+            sessionOutput.textContent =
+              'Network error — no API server running.\n\n' +
+              'This is expected in the demo.\n' +
+              'In production, the encrypted payload is sent to:\n' +
+              'POST {apiUrl}/v1/session\n\n' +
+              'Error: ' + err.message;
+          } else {
+            sessionOutput.textContent = 'Error (' + err.name + '): ' + err.message;
+          }
+        })
+        .finally(function () {
+          sessionBtn.disabled = false;
+        });
+    });
+  </script>
+</body>
+
+</html>
