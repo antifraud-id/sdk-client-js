@@ -8,7 +8,7 @@ const BROWSER_ID_KEY = 'antifraud_browser_id';
  * Falls back to an ephemeral UUID if localStorage is unavailable.
  */
 export function getOrCreateBrowserId(): string {
-  return safeGet(() => {
+  try {
     if (typeof localStorage !== 'undefined') {
       let id = localStorage.getItem(BROWSER_ID_KEY);
       if (!id) {
@@ -17,8 +17,10 @@ export function getOrCreateBrowserId(): string {
       }
       return id;
     }
-    return generateUUID();
-  }, generateUUID());
+  } catch {
+    // Handle sandboxed contexts or disabled storage gracefully
+  }
+  return generateUUID();
 }
 
 /**
@@ -96,30 +98,47 @@ export function collectHardware(): HardwareSignals {
 /**
  * Collect WebGL graphics info (vendor + renderer).
  */
+let cachedGraphics: GraphicsSignals | null = null;
+
 export function collectGraphics(): GraphicsSignals {
-  return safeGet(() => {
+  if (cachedGraphics) return cachedGraphics;
+
+  cachedGraphics = safeGet(() => {
     const canvas = document.createElement('canvas');
     const gl = canvas.getContext('webgl') || canvas.getContext('experimental-webgl');
     if (!gl) return { vendor: '', renderer: '' };
 
-    const debugInfo = (gl as WebGLRenderingContext).getExtension('WEBGL_debug_renderer_info');
-    if (!debugInfo) return { vendor: '', renderer: '' };
+    try {
+      const debugInfo = (gl as WebGLRenderingContext).getExtension('WEBGL_debug_renderer_info');
+      if (!debugInfo) return { vendor: '', renderer: '' };
 
-    return {
-      vendor:
-        (gl as WebGLRenderingContext).getParameter(debugInfo.UNMASKED_VENDOR_WEBGL) || '',
-      renderer:
-        (gl as WebGLRenderingContext).getParameter(debugInfo.UNMASKED_RENDERER_WEBGL) || '',
-    };
+      return {
+        vendor:
+          (gl as WebGLRenderingContext).getParameter(debugInfo.UNMASKED_VENDOR_WEBGL) || '',
+        renderer:
+          (gl as WebGLRenderingContext).getParameter(debugInfo.UNMASKED_RENDERER_WEBGL) || '',
+      };
+    } finally {
+      const loseContext = (gl as WebGLRenderingContext).getExtension('WEBGL_lose_context');
+      if (loseContext) {
+        loseContext.loseContext();
+      }
+    }
   }, { vendor: '', renderer: '' });
+
+  return cachedGraphics;
 }
 
 /**
  * Generate a canvas fingerprint hash.
  * Renders specific text/shapes, converts to dataURL, then FNV-1a hashes it.
  */
+let cachedCanvasFingerprint: string | null = null;
+
 export function collectCanvasFingerprint(): string {
-  return safeGet(() => {
+  if (cachedCanvasFingerprint !== null) return cachedCanvasFingerprint;
+
+  cachedCanvasFingerprint = safeGet(() => {
     const canvas = document.createElement('canvas');
     canvas.width = 200;
     canvas.height = 50;
@@ -138,6 +157,8 @@ export function collectCanvasFingerprint(): string {
     const dataUrl = canvas.toDataURL();
     return fnv1aHash(dataUrl);
   }, '');
+
+  return cachedCanvasFingerprint;
 }
 
 /**

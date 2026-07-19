@@ -50,12 +50,8 @@ export function uint8ArrayToBase64(bytes: Uint8Array): string {
   const CHUNK_SIZE = 8192;
   const chunks: string[] = [];
   for (let i = 0; i < bytes.length; i += CHUNK_SIZE) {
-    const end = Math.min(i + CHUNK_SIZE, bytes.length);
-    let str = '';
-    for (let j = i; j < end; j++) {
-      str += String.fromCharCode(bytes[j]);
-    }
-    chunks.push(str);
+    const chunk = bytes.subarray(i, i + CHUNK_SIZE);
+    chunks.push(String.fromCharCode.apply(null, chunk as unknown as number[]));
   }
   return btoa(chunks.join(''));
 }
@@ -78,6 +74,9 @@ export function fnv1aHash(input: string): string {
  * Requires HTTPS or localhost.
  */
 export function isSecureContext(): boolean {
+  if (typeof globalThis !== 'undefined' && typeof globalThis.isSecureContext === 'boolean') {
+    return globalThis.isSecureContext;
+  }
   if (typeof window !== 'undefined' && typeof window.isSecureContext === 'boolean') {
     return window.isSecureContext;
   }
