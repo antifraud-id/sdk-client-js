@@ -1,6 +1,6 @@
 {
   "name": "@antifraud/sdk-client-js",
-  "version": "1.0.0",
+  "version": "1.0.3",
   "description": "Antifraud Web Browser SDK — device fingerprint collection and session management",
   "type": "module",
   "main": "./dist/antifraud.cjs.js",
