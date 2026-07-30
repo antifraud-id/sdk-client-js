@@ -92,29 +92,38 @@ jobs:
           node-version: 20
           cache: npm
 
-      - name: Update version and push to main
+      - name: Download dist artifact for README update
+        uses: actions/download-artifact@v4
+        with:
+          name: dist
+          path: dist/
+
+      - name: Update version and README, push to main
         env:
           TAG_NAME: ${{ github.ref_name }}
         run: |
           TAG_VERSION="${TAG_NAME#v}"
-          echo "Target version: $TAG_VERSION"
 
           PKG_VERSION=$(node -p "require('./package.json').version")
-          echo "Current package version on main: $PKG_VERSION"
-
-          if [ "$PKG_VERSION" = "$TAG_VERSION" ]; then
-            echo "Version on main is already $TAG_VERSION. Skipping commit."
-            exit 0
+          if [ "$PKG_VERSION" != "$TAG_VERSION" ]; then
+            npm version "$TAG_VERSION" --no-git-tag-version
           fi
 
-          npm version "$TAG_VERSION" --no-git-tag-version
+          SRI_HASH=$(openssl dgst -sha384 -binary < dist/antifraud.min.js | openssl base64 -A)
+
+          sed -i "s|https://sdk.antifraud.id/v[0-9.]*/antifraud.min.js|https://sdk.antifraud.id/v$TAG_VERSION/antifraud.min.js|g" README.md
+          sed -i "s|integrity=\"sha384-[^\"]*\"|integrity=\"sha384-$SRI_HASH\"|g" README.md
 
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
 
-          git add package.json package-lock.json
-          git commit -m "chore(release): bump version to $TAG_VERSION [skip ci]"
-          git push origin HEAD:main
+          git add package.json package-lock.json README.md
+          if git diff --cached --quiet; then
+            echo "No changes to commit. Skipping."
+          else
+            git commit -m "chore(release): bump version to $TAG_VERSION, update README with SRI hash [skip ci]"
+            git push origin HEAD:main
+          fi
 
   upload-r2:
     needs: build-and-test
