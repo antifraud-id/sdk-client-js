@@ -55,7 +55,7 @@ export class AntifraudClient {
   }
 
   /**
-   * Collect, encrypt, and exchange fingerprint for a session_id.
+   * Collect, encrypt, and exchange fingerprint for a sessionId.
    * Deduped: concurrent calls return the same promise.
    */
   async createSession(): Promise<SessionResult> {
