@@ -1,7 +1,11 @@
 {
   "name": "@antifraud/sdk-client-js",
-  "version": "1.1.0",
+  "version": "1.1.1",
   "description": "Antifraud Web Browser SDK — device fingerprint collection and session management",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/antifraud-id/sdk-client-js"
+  },
   "type": "module",
   "main": "./dist/antifraud.cjs.js",
   "module": "./dist/antifraud.esm.js",
