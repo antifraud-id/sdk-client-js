@@ -121,7 +121,7 @@ jobs:
           if git diff --cached --quiet; then
             echo "No changes to commit. Skipping."
           else
-            git commit -m "chore(release): bump version to $TAG_VERSION, update README with SRI hash [skip ci]"
+            git commit -m "chore(release): bump version to $TAG_VERSION, update README with SRI hash"
             git push origin HEAD:main
           fi
 
