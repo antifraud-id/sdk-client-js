@@ -34,7 +34,7 @@ describe('AntifraudClient', () => {
       // Mock successful response
       fetchSpy.mockResolvedValueOnce({
         status: 200,
-        text: () => Promise.resolve(JSON.stringify({ session_id: 'test-session-123' })),
+        text: () => Promise.resolve(JSON.stringify({ sessionId: 'test-session-123' })),
       });
 
       const client = createClient({
@@ -68,7 +68,7 @@ describe('AntifraudClient', () => {
 
       fetchSpy.mockResolvedValueOnce({
         status: 200,
-        text: () => Promise.resolve(JSON.stringify({ session_id: 'sid' })),
+        text: () => Promise.resolve(JSON.stringify({ sessionId: 'sid' })),
       });
 
       const client = createClient({

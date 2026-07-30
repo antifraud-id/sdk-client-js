@@ -55,7 +55,7 @@ export class AntifraudClient {
   }
 
   /**
-   * Collect, encrypt, and exchange fingerprint for a session_id.
+   * Collect, encrypt, and exchange fingerprint for a sessionId.
    * Deduped: concurrent calls return the same promise.
    */
   async createSession(): Promise<SessionResult> {
@@ -107,11 +107,11 @@ export class AntifraudClient {
         throw new AntifraudClientError('Failed to parse response body as JSON', response.status, body);
       }
 
-      if (!data || typeof data.session_id !== 'string') {
-        throw new AntifraudClientError('Invalid response format: session_id is missing or invalid', response.status, body);
+      if (!data || typeof data.sessionId !== 'string') {
+        throw new AntifraudClientError('Invalid response format: sessionId is missing or invalid', response.status, body);
       }
 
-      return { sessionId: data.session_id };
+      return { sessionId: data.sessionId };
     } catch (err: any) {
       if (err.name === 'AbortError') {
         throw new TimeoutError(this.config.timeout);

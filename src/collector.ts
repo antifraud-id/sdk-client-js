@@ -169,12 +169,74 @@ export function collectIsLikelyMobile(): boolean {
 }
 
 /**
+ * Compute a stable device hash from hardware signals that are identical
+ * across all browsers on the same physical machine.
+ *
+ * 8 confirmed stable signals (validated on Chrome, Firefox, Safari on macOS):
+ *   screenResolution, devicePixelRatio, cpuCores, maxTouchPoints, timeZone,
+ *   audioSampleRate, colorGamutP3, pointerType
+ *
+ * Excluded (empirically proven browser-specific — differ on same device):
+ *   - deviceMemory:       Safari returns 0 (API unsupported)
+ *   - language:           browser-level preference, not OS
+ *   - graphics.vendor:    Chrome: "Google Inc. (Apple)", Safari: "Apple Inc."
+ *   - graphics.renderer:  Chrome: ANGLE/Metal, Safari: Apple GPU
+ *   - colorDepth:         Chrome=30bit (HDR reporting), Safari=24bit (SDR)
+ *   - availableScreen:    Chrome subtracts its toolbar, Safari does not
+ *   - navigator.platform: Chrome 100+ returns empty string
+ *   - userAgent, browserId, canvasFingerprint, collectedAt
+ */
+export function collectStableDeviceHash(): string {
+  const hw = collectHardware();
+  const identity = collectIdentity();
+
+  const screenResolution  = hw.screenResolution;
+  const devicePixelRatio  = String(hw.devicePixelRatio);
+  const cpuCores          = String(hw.cpuCores);
+  const maxTouchPoints    = String(hw.maxTouchPoints);
+  const timeZone          = identity.timeZone;
+
+  // OS audio driver sample rate — 44100 or 48000 Hz, identical across all browsers
+  const audioSampleRate = safeGet(() => {
+    const ctx = new AudioContext();
+    const rate = String(ctx.sampleRate);
+    ctx.close();
+    return rate;
+  }, '0');
+
+  // P3 wide-gamut display capability — hardware-level, same across browsers
+  const colorGamutP3 = safeGet(
+    () => window.matchMedia('(color-gamut: p3)').matches ? '1' : '0',
+    '0'
+  );
+
+  // Input pointer type — hardware-level (fine=mouse/trackpad, coarse=touchscreen)
+  const pointerType = safeGet(() => {
+    if (window.matchMedia('(pointer: fine)').matches)   return 'fine';
+    if (window.matchMedia('(pointer: coarse)').matches) return 'coarse';
+    return 'none';
+  }, 'none');
+
+  return fnv1aHash([
+    screenResolution,
+    devicePixelRatio,
+    cpuCores,
+    maxTouchPoints,
+    timeZone,
+    audioSampleRate,
+    colorGamutP3,
+    pointerType,
+  ].join('|'));
+}
+
+/**
  * Assemble the full DeviceInfo payload.
  * Matches model.WebSDKPayload (internal/model/sdk_payload.go:14-23).
  */
 export function collectFingerprint(): DeviceInfo {
   return {
     browserId: getOrCreateBrowserId(),
+    stableDeviceHash: collectStableDeviceHash(),
     network: { ip: '' },
     identity: collectIdentity(),
     hardware: collectHardware(),

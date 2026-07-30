@@ -47,6 +47,9 @@ jobs:
   publish-npm:
     needs: build-and-test
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      id-token: write
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -54,8 +57,11 @@ jobs:
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: 20
+          node-version: 22
           registry-url: https://registry.npmjs.org
+
+      - name: Upgrade npm
+        run: npm install -g npm@latest
 
       - name: Update version to match tag
         run: |
@@ -69,9 +75,7 @@ jobs:
           path: dist/
 
       - name: Publish to npm
-        run: npm publish --access public
-        env:
-          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+        run: npm publish --access public --provenance
 
   bump-version-on-main:
     needs: publish-npm
@@ -94,20 +98,20 @@ jobs:
         run: |
           TAG_VERSION="${TAG_NAME#v}"
           echo "Target version: $TAG_VERSION"
-          
+
           PKG_VERSION=$(node -p "require('./package.json').version")
           echo "Current package version on main: $PKG_VERSION"
-          
+
           if [ "$PKG_VERSION" = "$TAG_VERSION" ]; then
             echo "Version on main is already $TAG_VERSION. Skipping commit."
             exit 0
           fi
-          
+
           npm version "$TAG_VERSION" --no-git-tag-version
-          
+
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          
+
           git add package.json package-lock.json
           git commit -m "chore(release): bump version to $TAG_VERSION [skip ci]"
           git push origin HEAD:main

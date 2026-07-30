@@ -7,6 +7,12 @@ export interface WebSDKPayload {
 
 export interface DeviceInfo {
   browserId: string;
+  /**
+   * FNV-1a hash of browser-independent hardware signals.
+   * Identical across Firefox, Chrome, Safari on the same physical device.
+   * Used by the engine to recognize the same device across browsers.
+   */
+  stableDeviceHash: string;
   network: NetworkInfo;
   identity: IdentitySignals;
   hardware: HardwareSignals;
