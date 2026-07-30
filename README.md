@@ -18,8 +18,8 @@ Use the versioned URL in production. It is immutable — the content never chang
 ```html
 <!-- Production: pin a version, add SRI -->
 <script
-  src="https://sdk.antifraud.id/v0.1.0/antifraud.min.js"
-  integrity="sha384-..."
+  src="https://sdk.antifraud.id/v1.1.7/antifraud.min.js"
+  integrity="sha384-uowKIpPLlJaQW1hpIlMpVoTAD5QG0RQFph/NKJdjdCNxbtM9MrYMDryjEfujMiAm"
   crossorigin="anonymous"
 ></script>
 <script>
@@ -129,8 +129,8 @@ Pin the SDK version with an integrity hash. Use the versioned URL — the conten
 
 ```html
 <script
-  src="https://sdk.antifraud.id/v0.1.0/antifraud.min.js"
-  integrity="sha384-<hash>"
+  src="https://sdk.antifraud.id/v1.1.7/antifraud.min.js"
+  integrity="sha384-uowKIpPLlJaQW1hpIlMpVoTAD5QG0RQFph/NKJdjdCNxbtM9MrYMDryjEfujMiAm"
   crossorigin="anonymous"
 ></script>
 ```
